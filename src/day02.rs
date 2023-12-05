@@ -17,8 +17,8 @@ impl FromStr for Round {
         let mut red = 0;
         let mut green = 0;
         let mut blue = 0;
-        let mut split = s.split(", ");
-        while let Some(pair) = split.next() {
+        let split = s.split(", ");
+        for pair in split {
             let Some((amount, color)) = pair.split_once(' ') else {
                 return Err("No space in pair");
             };
@@ -64,9 +64,9 @@ impl FromStr for Game {
         let Ok(id): Result<Number, _> = id.parse() else {
             return Err("Game ID not numeric");
         };
-        let mut split = rounds.split("; ");
+        let split = rounds.split("; ");
         let mut rounds = Vec::new();
-        while let Some(round) = split.next() {
+        for round in split {
             let Ok(round): Result<Round, _> = round.parse() else {
                 return Err("Can't parse round");
             };

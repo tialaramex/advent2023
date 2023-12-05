@@ -15,16 +15,7 @@ impl From<char> for Code {
     fn from(ch: char) -> Self {
         match ch {
             '.' => Self::Empty,
-            '0' => Self::Digit(0),
-            '1' => Self::Digit(1),
-            '2' => Self::Digit(2),
-            '3' => Self::Digit(3),
-            '4' => Self::Digit(4),
-            '5' => Self::Digit(5),
-            '6' => Self::Digit(6),
-            '7' => Self::Digit(7),
-            '8' => Self::Digit(8),
-            '9' => Self::Digit(9),
+            d @ '0'..='9' => Self::Digit(d.to_digit(10).unwrap()),
             ch => Self::Symbol(ch),
         }
     }
@@ -111,44 +102,36 @@ fn check_gear(schematic: &Schematic, x: isize, y: isize) -> Option<Number> {
     let mut nums: Vec<Number> = Vec::new();
 
     // left
-    match check_one(schematic, x - 1, y) {
-        Some(n) => nums.push(n),
-        None => {}
+    if let Some(n) = check_one(schematic, x - 1, y) {
+        nums.push(n);
     }
 
     // right
-    match check_one(schematic, x + 1, y) {
-        Some(n) => nums.push(n),
-        None => {}
+    if let Some(n) = check_one(schematic, x + 1, y) {
+        nums.push(n);
     }
 
     // above
-    match check_one(schematic, x, y - 1) {
-        Some(n) => nums.push(n),
-        None => {
-            match check_one(schematic, x - 1, y - 1) {
-                Some(n) => nums.push(n),
-                None => {}
-            }
-            match check_one(schematic, x + 1, y - 1) {
-                Some(n) => nums.push(n),
-                None => {}
-            }
+    if let Some(n) = check_one(schematic, x, y - 1) {
+        nums.push(n);
+    } else {
+        if let Some(n) = check_one(schematic, x - 1, y - 1) {
+            nums.push(n);
+        }
+        if let Some(n) = check_one(schematic, x + 1, y - 1) {
+            nums.push(n);
         }
     }
 
     // below
-    match check_one(schematic, x, y + 1) {
-        Some(n) => nums.push(n),
-        None => {
-            match check_one(schematic, x - 1, y + 1) {
-                Some(n) => nums.push(n),
-                None => {}
-            }
-            match check_one(schematic, x + 1, y + 1) {
-                Some(n) => nums.push(n),
-                None => {}
-            }
+    if let Some(n) = check_one(schematic, x, y + 1) {
+        nums.push(n);
+    } else {
+        if let Some(n) = check_one(schematic, x - 1, y + 1) {
+            nums.push(n);
+        }
+        if let Some(n) = check_one(schematic, x + 1, y + 1) {
+            nums.push(n);
         }
     }
 
