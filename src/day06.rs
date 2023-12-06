@@ -3,7 +3,10 @@ use sky::readfile;
 type Number = u64;
 
 fn beat(duration: Number, best: Number) -> usize {
-    (0..=duration).map(|t| t * (duration - t)).filter(|&d| d > best).count()
+    (0..=duration)
+        .map(|t| t * (duration - t))
+        .filter(|&d| d > best)
+        .count()
 }
 
 pub fn a() {
@@ -19,10 +22,10 @@ pub fn a() {
     let pairs = t.split_ascii_whitespace().zip(d.split_ascii_whitespace());
     let mut product = 1;
     for (time, distance) in pairs.skip(1) {
-        let Ok(time): Result<Number,_> = time.parse() else {
+        let Ok(time): Result<Number, _> = time.parse() else {
             panic!("{time} isn't a number");
         };
-        let Ok(distance): Result<Number,_> = distance.parse() else {
+        let Ok(distance): Result<Number, _> = distance.parse() else {
             panic!("{distance} isn't a number");
         };
         product *= beat(time, distance);
@@ -53,6 +56,6 @@ pub fn b() {
     };
     let t = fix_everything(t);
     let d = fix_everything(d);
-    let answer = beat(t,d);
+    let answer = beat(t, d);
     println!("Can beat the real race {answer:?} ways");
 }
