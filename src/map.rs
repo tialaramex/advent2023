@@ -1,9 +1,11 @@
+use std::ops::RangeInclusive;
+
 #[derive(Copy, Clone, Debug)]
 struct Plane {
     size: isize,
     offset: isize,
-    start: isize,
-    end: isize,
+    start: isize, // Inclusive
+    end: isize,   // Inclusive
 }
 
 impl Plane {
@@ -21,7 +23,7 @@ impl Plane {
         }
     }
 
-    // Never shrink either end of the range, which might otherwise happen where Map::rect create
+    // Never shrink either end of the range, which might otherwise happen where Map::rect creates
     // large uninitialised Maps
     fn expand(&self) -> Self {
         const GROWTH: isize = 8;
@@ -31,14 +33,14 @@ impl Plane {
         } else {
             self.start - GROWTH
         };
-        let width = if self.size > self.end - offset + GROWTH {
+        let size = if self.size > self.end - offset + GROWTH {
             self.size
         } else {
             self.end - offset + GROWTH // When actually growing this ends up adding GROWTH at both edges
         };
         Self {
-            size: width,
-            offset: offset,
+            size,
+            offset,
             start: self.start,
             end: self.end,
         }
@@ -61,7 +63,6 @@ impl<T: Copy + Default> Default for Map<T> {
 /// A type for 2D maps of unknown expanses, the backing store automatically grows as necessary
 /// Map<T> implements Debug and/or Display if they are implemented for T to conveniently show the
 /// map
-use std::ops::Range;
 impl<T: Copy + Default> Map<T> {
     /// Map a Rectangle initially from (x1, y1) to (x2, y2) but it will grow automatically as
     /// necessary
@@ -80,6 +81,12 @@ impl<T: Copy + Default> Map<T> {
         let mut data = Vec::with_capacity(size);
         data.resize_with(size, Default::default);
         Self { data, x, y }
+    }
+
+    pub fn ranged(x: RangeInclusive<isize>, y: RangeInclusive<isize>) -> Self {
+        let (x1, x2) = x.into_inner();
+        let (y1, y2) = y.into_inner();
+        Self::rect((x1, y1), (x2, y2))
     }
 
     pub fn new() -> Self {
@@ -136,21 +143,15 @@ impl<T: Copy + Default> Map<T> {
     }
 
     /// Range of X values, it is possible that this range includes some "dead" space
-    /// NB if the Map was built by parsing a string, this will be the exact size
-    pub fn x(&self) -> Range<isize> {
-        Range {
-            start: self.x.start,
-            end: self.x.end,
-        }
+    /// but if the Map was built by parsing a string, this will be the exact size
+    pub fn x(&self) -> RangeInclusive<isize> {
+        self.x.start..=self.x.end
     }
 
     /// Range of Y values, it is possible that this range includes some "dead" space
-    /// NB if the Map was built by parsing a string, this will be the exact size
-    pub fn y(&self) -> Range<isize> {
-        Range {
-            start: self.y.start,
-            end: self.y.end,
-        }
+    /// but if the Map was built by parsing a string, this will be the exact size
+    pub fn y(&self) -> RangeInclusive<isize> {
+        self.y.start..=self.y.end
     }
 
     fn noitisop(&self, i: usize) -> (isize, isize) {
@@ -210,14 +211,14 @@ use std::fmt;
 impl<T: fmt::Debug + Copy + Default> fmt::Debug for Map<T> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.write_fmt(format_args!(
-            "x: [ {} {} ... {} {} ] ",
+            "x: [ {} {}..={} {} ] ",
             self.x.offset,
             self.x.start,
             self.x.end,
             self.x.offset + self.x.size
         ))?;
         f.write_fmt(format_args!(
-            "y: [ {} {} ... {} {} ]\n",
+            "y: [ {} {}..={} {} ]\n",
             self.y.offset,
             self.y.start,
             self.y.end,
@@ -225,10 +226,13 @@ impl<T: fmt::Debug + Copy + Default> fmt::Debug for Map<T> {
         ))?;
         let from_y = self.y.start - self.y.offset;
         let from_x = self.x.start - self.x.offset;
-        let to_y = self.y.size - (self.y.offset + self.y.size - self.y.end) + 1;
-        let to_x = self.x.size - (self.x.offset + self.x.size - self.x.end) + 1;
-        for row in from_y..to_y {
-            for col in from_x..to_x {
+        let to_y = self.y.size - (self.y.offset + self.y.size - self.y.end);
+        let to_x = self.x.size - (self.x.offset + self.x.size - self.x.end);
+        if self.data.is_empty() {
+            return Ok(());
+        }
+        for row in from_y..=to_y {
+            for col in from_x..=to_x {
                 let posn = row * self.x.size + col;
                 let s = format!("{:?}", self.data[posn as usize]);
                 f.write_str(&s)?;
@@ -243,10 +247,13 @@ impl<T: fmt::Display + Copy + Default> fmt::Display for Map<T> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let from_y = self.y.start - self.y.offset;
         let from_x = self.x.start - self.x.offset;
-        let to_y = self.y.size - (self.y.offset + self.y.size - self.y.end) + 1;
-        let to_x = self.x.size - (self.x.offset + self.x.size - self.x.end) + 1;
-        for row in from_y..to_y {
-            for col in from_x..to_x {
+        let to_y = self.y.size - (self.y.offset + self.y.size - self.y.end);
+        let to_x = self.x.size - (self.x.offset + self.x.size - self.x.end);
+        if self.data.is_empty() {
+            return Ok(());
+        }
+        for row in from_y..=to_y {
+            for col in from_x..=to_x {
                 let posn = row * self.x.size + col;
                 let s = format!("{}", self.data[posn as usize]);
                 f.write_str(&s)?;
@@ -275,5 +282,52 @@ where
             }
         }
         Ok(map)
+    }
+}
+
+#[cfg(test)]
+
+mod tests {
+    use crate::map::Map;
+
+    #[derive(Copy, Clone, Debug, Default, PartialEq)]
+    enum Maze {
+        #[default]
+        Wall,
+        Space,
+        Us,
+    }
+
+    const MAZE: &str = include_str!("test-map.txt");
+
+    impl From<char> for Maze {
+        fn from(ch: char) -> Self {
+            match ch {
+                '#' => Maze::Wall,
+                ' ' => Maze::Space,
+                _ => panic!("Impossible"),
+            }
+        }
+    }
+
+    #[test]
+    fn default_map() {
+        let map: Map<u8> = Default::default();
+        assert_eq!(map.count(|&i| i == &1), 0);
+    }
+
+    #[test]
+    fn maze_size() {
+        let map: Map<Maze> = MAZE.parse().unwrap();
+        assert_eq!(map.x(), 0..=8);
+        assert_eq!(map.y(), 0..=6);
+    }
+
+    #[test]
+    fn maze_write() {
+        let mut map: Map<Maze> = MAZE.parse().unwrap();
+        assert_eq!(map.count(|&m| m == &Maze::Space), 23);
+        map.write(1, 1, Maze::Us);
+        assert_eq!(map.count(|&m| m == &Maze::Space), 22);
     }
 }
