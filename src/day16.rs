@@ -121,12 +121,19 @@ impl Beam {
 }
 
 fn basic(input: &Contraption) -> usize {
-    energized(input, Beam { x: 0, y: 0, direction: Direction::Right })
+    energized(
+        input,
+        Beam {
+            x: 0,
+            y: 0,
+            direction: Direction::Right,
+        },
+    )
 }
 
 fn energized(input: &Contraption, start: Beam) -> usize {
     let mut done: HashSet<Beam> = HashSet::new();
-    let mut out: HashSet<(isize,isize)> = HashSet::new();
+    let mut out: HashSet<(isize, isize)> = HashSet::new();
     let mut todo: Vec<Beam> = Vec::new();
     todo.push(start);
     let &right = input.x().end();
@@ -179,21 +186,49 @@ pub fn b() {
     let &bottom = map.y().end();
     let mut best = 0;
     for x in map.x() {
-        let count = energized(&map, Beam { x, y: 0, direction: Direction::Down});
+        let count = energized(
+            &map,
+            Beam {
+                x,
+                y: 0,
+                direction: Direction::Down,
+            },
+        );
         if count > best {
             best = count;
         }
-        let count = energized(&map, Beam { x, y: bottom, direction: Direction::Up});
+        let count = energized(
+            &map,
+            Beam {
+                x,
+                y: bottom,
+                direction: Direction::Up,
+            },
+        );
         if count > best {
             best = count;
         }
     }
     for y in map.y() {
-        let count = energized(&map, Beam { x: 0, y, direction: Direction::Right});
+        let count = energized(
+            &map,
+            Beam {
+                x: 0,
+                y,
+                direction: Direction::Right,
+            },
+        );
         if count > best {
             best = count;
         }
-        let count = energized(&map, Beam { x: right, y, direction: Direction::Left});
+        let count = energized(
+            &map,
+            Beam {
+                x: right,
+                y,
+                direction: Direction::Left,
+            },
+        );
         if count > best {
             best = count;
         }
