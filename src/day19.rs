@@ -3,32 +3,40 @@ use std::collections::HashMap;
 
 type Number = u64;
 
+#[derive(Copy, Clone, Debug)]
+enum MoreOrLess {
+    Less,
+    More,
+}
+
+#[derive(Copy, Clone, Debug)]
+enum Xmas {
+    X,
+    M,
+    A,
+    S,
+}
+
 #[derive(Clone, Debug)]
-enum Rule {
-    Always(String),
-    Xless(Number, String),
-    Xmore(Number, String),
-    Mless(Number, String),
-    Mmore(Number, String),
-    Aless(Number, String),
-    Amore(Number, String),
-    Sless(Number, String),
-    Smore(Number, String),
+struct Rule {
+    target: String,
+    kind: MoreOrLess,
+    letter: Xmas,
+    num: Number,
 }
 
 impl Rule {
-    fn flow(&self) -> &str {
-        match self {
-            Rule::Always(s) => &s,
-            Rule::Xless(_, s) => &s,
-            Rule::Xmore(_, s) => &s,
-            Rule::Mless(_, s) => &s,
-            Rule::Mmore(_, s) => &s,
-            Rule::Aless(_, s) => &s,
-            Rule::Amore(_, s) => &s,
-            Rule::Sless(_, s) => &s,
-            Rule::Smore(_, s) => &s,
+    fn unconditional(target: String) -> Self {
+        Rule {
+            target,
+            kind: MoreOrLess::More,
+            letter: Xmas::X,
+            num: 0,
         }
+    }
+
+    fn flow(&self) -> &str {
+        &self.target
     }
 }
 
@@ -38,6 +46,19 @@ struct Ratings {
     m: Number,
     a: Number,
     s: Number,
+}
+
+impl std::ops::Index<Xmas> for Ratings {
+    type Output = Number;
+
+    fn index(&self, index: Xmas) -> &Self::Output {
+        match index {
+            Xmas::X => &self.x,
+            Xmas::M => &self.m,
+            Xmas::A => &self.a,
+            Xmas::S => &self.s,
+        }
+    }
 }
 
 impl Ratings {
@@ -90,21 +111,61 @@ fn parse(s: &str) -> (&str, Vec<Rule>) {
         .expect("Workflow should have braces surrounding rules");
     for rule in rest.split(',') {
         let Some((condition, target)) = rule.split_once(':') else {
-            rules.push(Rule::Always(String::from(rule)));
+            rules.push(Rule::unconditional(String::from(rule)));
             continue;
         };
         let (what, num) = condition.split_at(2);
         let num: Number = num.parse().expect("Numerics should be integers");
         let target = String::from(target);
         let rule = match what {
-            "x<" => Rule::Xless(num, target),
-            "x>" => Rule::Xmore(num, target),
-            "m<" => Rule::Mless(num, target),
-            "m>" => Rule::Mmore(num, target),
-            "a<" => Rule::Aless(num, target),
-            "a>" => Rule::Amore(num, target),
-            "s<" => Rule::Sless(num, target),
-            "s>" => Rule::Smore(num, target),
+            "x<" => Rule {
+                target,
+                kind: MoreOrLess::Less,
+                letter: Xmas::X,
+                num,
+            },
+            "x>" => Rule {
+                target,
+                kind: MoreOrLess::More,
+                letter: Xmas::X,
+                num,
+            },
+            "m<" => Rule {
+                target,
+                kind: MoreOrLess::Less,
+                letter: Xmas::M,
+                num,
+            },
+            "m>" => Rule {
+                target,
+                kind: MoreOrLess::More,
+                letter: Xmas::M,
+                num,
+            },
+            "a<" => Rule {
+                target,
+                kind: MoreOrLess::Less,
+                letter: Xmas::A,
+                num,
+            },
+            "a>" => Rule {
+                target,
+                kind: MoreOrLess::More,
+                letter: Xmas::A,
+                num,
+            },
+            "s<" => Rule {
+                target,
+                kind: MoreOrLess::Less,
+                letter: Xmas::S,
+                num,
+            },
+            "s>" => Rule {
+                target,
+                kind: MoreOrLess::More,
+                letter: Xmas::S,
+                num,
+            },
             _ => panic!("Impossible rule {rule}"),
         };
         rules.push(rule);
@@ -118,58 +179,18 @@ type Rules<'t> = HashMap<&'t str, Vec<Rule>>;
 fn accept(rules: &Rules, part: Ratings) -> bool {
     let mut name = "in";
     loop {
-        let conditions = rules.get(name).expect("Named rule should in rules list");
+        let conditions = rules.get(name).expect("Named rule should be in rules list");
         for cond in conditions {
-            match cond {
-                Rule::Always(n) => {
-                    name = &n;
-                    break;
-                }
-                Rule::Xless(num, n) => {
-                    if part.x < *num {
-                        name = &n;
+            match cond.kind {
+                MoreOrLess::Less => {
+                    if part[cond.letter] < cond.num {
+                        name = &cond.target;
                         break;
                     }
                 }
-                Rule::Xmore(num, n) => {
-                    if part.x > *num {
-                        name = &n;
-                        break;
-                    }
-                }
-                Rule::Mless(num, n) => {
-                    if part.m < *num {
-                        name = &n;
-                        break;
-                    }
-                }
-                Rule::Mmore(num, n) => {
-                    if part.m > *num {
-                        name = &n;
-                        break;
-                    }
-                }
-                Rule::Aless(num, n) => {
-                    if part.a < *num {
-                        name = &n;
-                        break;
-                    }
-                }
-                Rule::Amore(num, n) => {
-                    if part.a > *num {
-                        name = &n;
-                        break;
-                    }
-                }
-                Rule::Sless(num, n) => {
-                    if part.s < *num {
-                        name = &n;
-                        break;
-                    }
-                }
-                Rule::Smore(num, n) => {
-                    if part.s > *num {
-                        name = &n;
+                MoreOrLess::More => {
+                    if part[cond.letter] > cond.num {
+                        name = &cond.target;
                         break;
                     }
                 }
@@ -214,169 +235,118 @@ impl Combs {
         x * m * a * s
     }
 
+    fn edges(&self, letter: Xmas) -> (Number, Number) {
+        match letter {
+            Xmas::X => (*self.x.start(), *self.x.end()),
+            Xmas::M => (*self.m.start(), *self.m.end()),
+            Xmas::A => (*self.a.start(), *self.a.end()),
+            Xmas::S => (*self.s.start(), *self.s.end()),
+        }
+    }
+
     // passed rule  vs failed rule
     fn split(self, rule: &Rule) -> (Option<Self>, Option<Self>) {
-        match rule {
-            Rule::Always(_) => (Some(self), None),
-            Rule::Xless(num, _) => {
-                let start = self.x.start().clone();
-                let end = self.x.end().clone();
-                if num <= &start {
+        let (start, end) = self.edges(rule.letter);
+        match rule.kind {
+            MoreOrLess::Less => {
+                if rule.num <= start {
                     return (None, Some(self));
                 }
-                if num >= &end {
+                if rule.num >= end {
                     return (Some(self), None);
                 }
-                (
-                    Some(Self {
-                        x: start..=(num - 1),
-                        ..self.clone()
-                    }),
-                    Some(Self {
-                        x: *num..=end,
-                        ..self
-                    }),
-                )
+                match rule.letter {
+                    Xmas::X => (
+                        Some(Self {
+                            x: start..=(rule.num - 1),
+                            ..self.clone()
+                        }),
+                        Some(Self {
+                            x: rule.num..=end,
+                            ..self
+                        }),
+                    ),
+                    Xmas::M => (
+                        Some(Self {
+                            m: start..=(rule.num - 1),
+                            ..self.clone()
+                        }),
+                        Some(Self {
+                            m: rule.num..=end,
+                            ..self
+                        }),
+                    ),
+                    Xmas::A => (
+                        Some(Self {
+                            a: start..=(rule.num - 1),
+                            ..self.clone()
+                        }),
+                        Some(Self {
+                            a: rule.num..=end,
+                            ..self
+                        }),
+                    ),
+                    Xmas::S => (
+                        Some(Self {
+                            s: start..=(rule.num - 1),
+                            ..self.clone()
+                        }),
+                        Some(Self {
+                            s: rule.num..=end,
+                            ..self
+                        }),
+                    ),
+                }
             }
-            Rule::Xmore(num, _) => {
-                let start = self.x.start().clone();
-                let end = self.x.end().clone();
-                if num <= &start {
+            MoreOrLess::More => {
+                if rule.num <= start {
                     return (Some(self), None);
                 }
-                if num >= &end {
+                if rule.num >= end {
                     return (None, Some(self));
                 }
-                (
-                    Some(Self {
-                        x: (num + 1)..=end,
-                        ..self.clone()
-                    }),
-                    Some(Self {
-                        x: start..=*num,
-                        ..self
-                    }),
-                )
-            }
-            Rule::Mless(num, _) => {
-                let start = self.m.start().clone();
-                let end = self.m.end().clone();
-                if num <= &start {
-                    return (None, Some(self));
+                match rule.letter {
+                    Xmas::X => (
+                        Some(Self {
+                            x: (rule.num + 1)..=end,
+                            ..self.clone()
+                        }),
+                        Some(Self {
+                            x: start..=(rule.num),
+                            ..self
+                        }),
+                    ),
+                    Xmas::M => (
+                        Some(Self {
+                            m: (rule.num + 1)..=end,
+                            ..self.clone()
+                        }),
+                        Some(Self {
+                            m: start..=(rule.num),
+                            ..self
+                        }),
+                    ),
+                    Xmas::A => (
+                        Some(Self {
+                            a: (rule.num + 1)..=end,
+                            ..self.clone()
+                        }),
+                        Some(Self {
+                            a: start..=(rule.num),
+                            ..self
+                        }),
+                    ),
+                    Xmas::S => (
+                        Some(Self {
+                            s: (rule.num + 1)..=end,
+                            ..self.clone()
+                        }),
+                        Some(Self {
+                            s: start..=(rule.num),
+                            ..self
+                        }),
+                    ),
                 }
-                if num >= &end {
-                    return (Some(self), None);
-                }
-                (
-                    Some(Self {
-                        m: start..=(num - 1),
-                        ..self.clone()
-                    }),
-                    Some(Self {
-                        m: *num..=end,
-                        ..self
-                    }),
-                )
-            }
-            Rule::Mmore(num, _) => {
-                let start = self.m.start().clone();
-                let end = self.m.end().clone();
-                if num <= &start {
-                    return (Some(self), None);
-                }
-                if num >= &end {
-                    return (None, Some(self));
-                }
-                (
-                    Some(Self {
-                        m: (num + 1)..=end,
-                        ..self.clone()
-                    }),
-                    Some(Self {
-                        m: start..=*num,
-                        ..self
-                    }),
-                )
-            }
-            Rule::Aless(num, _) => {
-                let start = self.a.start().clone();
-                let end = self.a.end().clone();
-                if num <= &start {
-                    return (None, Some(self));
-                }
-                if num >= &end {
-                    return (Some(self), None);
-                }
-                (
-                    Some(Self {
-                        a: start..=(num - 1),
-                        ..self.clone()
-                    }),
-                    Some(Self {
-                        a: *num..=end,
-                        ..self
-                    }),
-                )
-            }
-            Rule::Amore(num, _) => {
-                let start = self.a.start().clone();
-                let end = self.a.end().clone();
-                if num <= &start {
-                    return (Some(self), None);
-                }
-                if num >= &end {
-                    return (None, Some(self));
-                }
-                (
-                    Some(Self {
-                        a: (num + 1)..=end,
-                        ..self.clone()
-                    }),
-                    Some(Self {
-                        a: start..=*num,
-                        ..self
-                    }),
-                )
-            }
-            Rule::Sless(num, _) => {
-                let start = self.s.start().clone();
-                let end = self.s.end().clone();
-                if num <= &start {
-                    return (None, Some(self));
-                }
-                if num >= &end {
-                    return (Some(self), None);
-                }
-                (
-                    Some(Self {
-                        s: start..=(num - 1),
-                        ..self.clone()
-                    }),
-                    Some(Self {
-                        s: *num..=end,
-                        ..self
-                    }),
-                )
-            }
-            Rule::Smore(num, _) => {
-                let start = self.s.start().clone();
-                let end = self.s.end().clone();
-                if num <= &start {
-                    return (Some(self), None);
-                }
-                if num >= &end {
-                    return (None, Some(self));
-                }
-                (
-                    Some(Self {
-                        s: (num + 1)..=end,
-                        ..self.clone()
-                    }),
-                    Some(Self {
-                        s: start..=*num,
-                        ..self
-                    }),
-                )
             }
         }
     }
@@ -418,7 +388,7 @@ pub fn a() {
     let mut lines = ctxt.lines();
     let mut rules: Rules = HashMap::new();
 
-    while let Some(line) = lines.next() {
+    for line in lines.by_ref() {
         if line.is_empty() {
             break;
         }
