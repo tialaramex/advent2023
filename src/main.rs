@@ -20,6 +20,7 @@ mod day19;
 mod day20;
 mod day21;
 mod day22;
+mod day23;
 
 use sky::days;
 
@@ -54,5 +55,6 @@ fn main() {
         day20,
         day21,
         day22,
+        day23,
     );
 }
