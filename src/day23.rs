@@ -222,16 +222,18 @@ fn routes(map: &Trail) -> Vec<Route> {
     r
 }
 
+type Segment = (Number, isize, isize);
+
 use std::collections::HashMap;
 fn journeys(r: &[Route]) -> Vec<Number> {
     let mut totals: Vec<Number> = Vec::new();
-    let mut graph: HashMap<(isize, isize), Vec<(Number, isize, isize)>> = HashMap::new();
+    let mut graph: HashMap<(isize, isize), Vec<Segment>> = HashMap::new();
     for route in r {
         let v = graph.entry(route.from).or_default();
         v.push((route.distance, route.to.0, route.to.1));
     }
 
-    let mut attempts: Vec<(Number, isize, isize)> = vec![(0, 1, -1)];
+    let mut attempts: Vec<Segment> = vec![(0, 1, -1)];
     while let Some(attempt) = attempts.pop() {
         let (steps, x, y) = attempt;
         let Some(onward) = graph.get(&(x, y)) else {
@@ -251,7 +253,9 @@ pub fn a() {
     let trail: Trail = ctxt.value().parse().unwrap();
     let r = routes(&trail);
     let totals = journeys(&r);
-    let best = totals.last().expect("At least one possible route should exist");
+    let best = totals
+        .last()
+        .expect("At least one possible route should exist");
     println!("The longest hike is {best} steps long");
 }
 
