@@ -145,7 +145,7 @@ fn revised_seed_list(s: &str) -> Vec<Numbers> {
     let mut seeds = Vec::new();
     while let Some(start) = list.next().and_then(|start| start.parse().ok()) {
         let Some(count): Option<Number> = list.next().and_then(|count| count.parse().ok()) else {
-            panic!("Uneveen seed list cannot work as described in problem");
+            panic!("Uneven seed list cannot work as described in problem");
         };
         seeds.push(Numbers {
             from: start,
