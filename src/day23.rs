@@ -460,7 +460,7 @@ impl Wanderer {
         v
     }
 
-    /// _Maximum_ steps from initial until predicate is true
+    /// _Maximum_ steps from start to end
     fn furthest(start: NodeId, end: NodeId, graph: &NewGraph) -> Number {
         if start == end {
             return 0;
@@ -510,9 +510,13 @@ fn new_journeys(r: &[Route]) -> Number {
         });
 
         let v = graph.entry(from).or_default();
-        v.push((route.distance, to));
+        if !v.contains(&(route.distance, to)) {
+            v.push((route.distance, to));
+        }
         let v = graph.entry(to).or_default();
-        v.push((route.distance, from));
+        if !v.contains(&(route.distance, from)) {
+            v.push((route.distance, from));
+        }
     }
     let start = *lookup
         .get(&(1, -1))
