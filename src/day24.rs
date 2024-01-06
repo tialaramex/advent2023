@@ -3,7 +3,7 @@ use std::ops::RangeInclusive;
 
 // Several concepts for part II cribbed from /u/TheZigerionScammer in Reddit's r/adventofcode
 
-type Number = i128;
+type Number = i64;
 
 const TEST: RangeInclusive<Number> = 200000000000000..=400000000000000;
 
@@ -202,14 +202,14 @@ fn velocity(stones: &[Hailstone]) -> Velocity {
 
 #[derive(Copy, Clone, Debug)]
 struct Rational {
-    numerator: Number,
-    denominator: Number,
+    numerator: i128,
+    denominator: i128,
 }
 
 impl Rational {
-    fn new(numerator: Number) -> Self {
+    fn new(n: Number) -> Self {
         Self {
-            numerator,
+            numerator: n.into(),
             denominator: 1,
         }
     }
@@ -218,14 +218,15 @@ impl Rational {
         let i = self.numerator / self.denominator;
         let check = i * self.denominator;
         assert_eq!(check, self.numerator);
-        i
+        i.try_into()
+            .expect("Whole values should fit in the Number type")
     }
 
-    fn simplify(mut numerator: Number, mut denominator: Number) -> Self {
-        while (numerator & 1) == 0 && (denominator & 1) == 0 {
-            numerator /= 2;
-            denominator /= 2;
-        }
+    fn simplify(mut numerator: i128, mut denominator: i128) -> Self {
+        let divisor = num::Integer::gcd(&numerator, &denominator);
+        numerator /= divisor;
+        denominator /= divisor;
+
         Self {
             numerator,
             denominator,
